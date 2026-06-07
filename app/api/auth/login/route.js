@@ -9,7 +9,7 @@ export async function POST(request) {
       return Response.json({ error: 'Username and password are required' }, { status: 400 });
     }
 
-    const user = queryOne('SELECT * FROM users WHERE username = ?', [username]);
+    const user = await queryOne('SELECT * FROM users WHERE username = ?', [username]);
     if (!user) {
       return Response.json({ error: 'Invalid username or password' }, { status: 401 });
     }

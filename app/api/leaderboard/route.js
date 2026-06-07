@@ -15,23 +15,23 @@ export async function GET(request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    user = refillHearts(user);
+    user = await refillHearts(user);
 
     const weekStart = getWeekStart();
 
-    const existing = queryAll('SELECT * FROM leaderboard WHERE week_start = ? ORDER BY weekly_xp DESC', [weekStart]);
+    const existing = await queryAll('SELECT * FROM leaderboard WHERE week_start = ? ORDER BY weekly_xp DESC', [weekStart]);
 
     if (existing.length === 0) {
-      const users = queryAll('SELECT id, username FROM users');
+      const users = await queryAll('SELECT id, username FROM users');
       for (const u of users) {
-        runSql(
-          'INSERT OR IGNORE INTO leaderboard (user_id, weekly_xp, league, week_start) VALUES (?, 0, ?, ?)',
+        await runSql(
+          'INSERT INTO leaderboard (user_id, weekly_xp, league, week_start) VALUES (?, 0, ?, ?) ON CONFLICT (user_id) DO NOTHING',
           [u.id, user.league || 'bronze', weekStart]
         );
       }
     }
 
-    const rankings = queryAll(
+    const rankings = await queryAll(
       `SELECT l.weekly_xp, l.league, u.id as user_id, u.username
        FROM leaderboard l
        JOIN users u ON l.user_id = u.id

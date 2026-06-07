@@ -8,9 +8,9 @@ export async function GET(request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const all = queryAll('SELECT * FROM achievements ORDER BY id');
+    const all = await queryAll('SELECT * FROM achievements ORDER BY id');
     const unlockedIds = new Set(
-      queryAll('SELECT achievement_id FROM user_achievements WHERE user_id = ?', [user.id])
+      (await queryAll('SELECT achievement_id FROM user_achievements WHERE user_id = ?', [user.id]))
         .map((r) => r.achievement_id)
     );
 

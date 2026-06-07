@@ -8,7 +8,7 @@ export async function GET(request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const inventory = queryAll(
+    const inventory = await queryAll(
       'SELECT * FROM user_inventory WHERE user_id = ?',
       [user.id]
     );

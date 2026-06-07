@@ -7,7 +7,7 @@ export async function GET(request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    user = refillHearts(user);
+    user = await refillHearts(user);
 
     const { password_hash, ...safeUser } = user;
     return Response.json({ user: safeUser });

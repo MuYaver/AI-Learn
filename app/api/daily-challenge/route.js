@@ -9,48 +9,48 @@ export async function GET(request) {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const challenge = queryOne('SELECT * FROM daily_challenges WHERE challenge_date = ?', [today]);
+    const challenge = await queryOne('SELECT * FROM daily_challenges WHERE challenge_date = ?', [today]);
 
     if (!challenge) {
       return Response.json({ challenge: null, progress: 0 });
     }
 
-    const userChallenge = queryOne(
+    const userChallenge = await queryOne(
       'SELECT * FROM user_daily_challenges WHERE user_id = ? AND challenge_id = ?',
       [user.id, challenge.id]
     );
 
     let progress = 0;
     if (challenge.target_type === 'lessons_today') {
-      const count = queryOne(
+      const count = await queryOne(
         `SELECT COUNT(*) as count FROM user_lesson_progress
-         WHERE user_id = ? AND completed = 1 AND date(completed_at) = ?`,
+         WHERE user_id = ? AND completed = 1 AND completed_at::date = ?`,
         [user.id, today]
       );
       progress = count.count;
     } else if (challenge.target_type === 'xp_today') {
-      const xpSum = queryOne(
+      const xpSum = await queryOne(
         `SELECT COALESCE(SUM(xp_earned), 0) as total FROM user_lesson_progress
-         WHERE user_id = ? AND completed = 1 AND date(completed_at) = ?`,
+         WHERE user_id = ? AND completed = 1 AND completed_at::date = ?`,
         [user.id, today]
       );
       progress = xpSum.total;
     } else if (challenge.target_type === 'perfect_lesson') {
-      const perfect = queryOne(
+      const perfect = await queryOne(
         `SELECT COUNT(*) as count FROM user_lesson_progress
-         WHERE user_id = ? AND completed = 1 AND score = 100 AND date(completed_at) = ?`,
+         WHERE user_id = ? AND completed = 1 AND score = 100 AND completed_at::date = ?`,
         [user.id, today]
       );
       progress = perfect.count;
     }
 
     if (userChallenge && progress > 0) {
-      runSql(
+      await runSql(
         'UPDATE user_daily_challenges SET progress = ? WHERE id = ?',
         [progress, userChallenge.id]
       );
     } else if (!userChallenge && progress > 0) {
-      runSql(
+      await runSql(
         'INSERT INTO user_daily_challenges (user_id, challenge_id, progress) VALUES (?, ?, ?)',
         [user.id, challenge.id, progress]
       );
@@ -75,12 +75,12 @@ export async function POST(request) {
     }
 
     const { challengeId } = await request.json();
-    const challenge = queryOne('SELECT * FROM daily_challenges WHERE id = ?', [challengeId]);
+    const challenge = await queryOne('SELECT * FROM daily_challenges WHERE id = ?', [challengeId]);
     if (!challenge) {
       return Response.json({ error: 'Challenge not found' }, { status: 404 });
     }
 
-    const existing = queryOne(
+    const existing = await queryOne(
       'SELECT * FROM user_daily_challenges WHERE user_id = ? AND challenge_id = ?',
       [user.id, challengeId]
     );
@@ -93,12 +93,12 @@ export async function POST(request) {
       return Response.json({ error: 'Challenge not complete yet' }, { status: 400 });
     }
 
-    runSql(
-      'UPDATE user_daily_challenges SET completed = 1, completed_at = datetime(\'now\') WHERE id = ?',
+    await runSql(
+      'UPDATE user_daily_challenges SET completed = 1, completed_at = NOW() WHERE id = ?',
       [existing.id]
     );
 
-    runSql(
+    await runSql(
       'UPDATE users SET xp = xp + ?, gems = gems + ? WHERE id = ?',
       [challenge.reward_xp, challenge.reward_gems, user.id]
     );

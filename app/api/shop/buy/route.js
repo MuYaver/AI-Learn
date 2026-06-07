@@ -9,7 +9,7 @@ export async function POST(request) {
     }
 
     const { itemId } = await request.json();
-    const item = queryOne('SELECT * FROM shop_items WHERE id = ?', [itemId]);
+    const item = await queryOne('SELECT * FROM shop_items WHERE id = ?', [itemId]);
     if (!item) {
       return Response.json({ error: 'Item not found' }, { status: 404 });
     }
@@ -18,17 +18,17 @@ export async function POST(request) {
       return Response.json({ error: 'Not enough gems' }, { status: 400 });
     }
 
-    runSql('UPDATE users SET gems = gems - ? WHERE id = ?', [item.cost_gems, user.id]);
+    await runSql('UPDATE users SET gems = gems - ? WHERE id = ?', [item.cost_gems, user.id]);
 
-    const existing = queryOne(
+    const existing = await queryOne(
       'SELECT * FROM user_inventory WHERE user_id = ? AND item_id = ?',
       [user.id, itemId]
     );
 
     if (existing) {
-      runSql('UPDATE user_inventory SET quantity = quantity + 1 WHERE id = ?', [existing.id]);
+      await runSql('UPDATE user_inventory SET quantity = quantity + 1 WHERE id = ?', [existing.id]);
     } else {
-      runSql(
+      await runSql(
         'INSERT INTO user_inventory (user_id, item_id, quantity) VALUES (?, ?, 1)',
         [user.id, itemId]
       );

@@ -1,6 +1,4 @@
-import { getDb, runSql, queryOne } from '../lib/db.js';
-
-const db = getDb();
+import { runSql, queryOne } from '../lib/db.js';
 
 const units = [
   { title: 'What is AI?', description: 'Discover the basics of artificial intelligence', order: 1 },
@@ -687,40 +685,33 @@ const achievements = [
   { name: 'Gems Collector', description: 'Save up 500 gems', icon: '💎', criteria_type: 'gems_collected', criteria_value: 500, reward_xp: 200, reward_gems: 25 },
 ];
 
-function seed() {
-  const existing = queryOne('SELECT COUNT(*) as count FROM units');
+async function seed() {
+  const existing = await queryOne('SELECT COUNT(*) as count FROM units');
 
-  if (existing.count === 0) {
+  if (existing.count === '0' || existing.count === 0) {
     console.log('Seeding database...');
 
-    const insertUnit = db.prepare('INSERT INTO units (title, description, "order") VALUES (?, ?, ?)');
-    const insertLesson = db.prepare('INSERT INTO lessons (unit_id, title, "order") VALUES (?, ?, ?)');
-    const insertExercise = db.prepare('INSERT INTO exercises (lesson_id, type, question, options, correct_answer, explanation, "order") VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const insertShopItem = db.prepare('INSERT INTO shop_items (name, description, type, cost_gems, effect_data) VALUES (?, ?, ?, ?, ?)');
-    const insertAchievement = db.prepare('INSERT INTO achievements (name, description, icon, criteria_type, criteria_value, reward_xp, reward_gems) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const insertChallenge = db.prepare('INSERT OR IGNORE INTO daily_challenges (challenge_date, title, description, target_type, target_value, reward_xp, reward_gems) VALUES (?, ?, ?, ?, ?, ?, ?)');
-
     for (const unit of units) {
-      insertUnit.run(unit.title, unit.description, unit.order);
+      await runSql('INSERT INTO units (title, description, "order") VALUES (?, ?, ?)', [unit.title, unit.description, unit.order]);
     }
 
     for (const [unitIdx, lessons] of Object.entries(lessonData)) {
       const unitId = parseInt(unitIdx);
       for (const [lessonIdx, lesson] of lessons.entries()) {
-        const result = insertLesson.run(unitId, lesson.title, lessonIdx + 1);
-        const lessonId = result.lastInsertRowid;
+        const result = await runSql('INSERT INTO lessons (unit_id, title, "order") VALUES (?, ?, ?) RETURNING id', [unitId, lesson.title, lessonIdx + 1]);
+        const lessonId = result.rows[0].id;
         for (const [exIdx, ex] of lesson.content.entries()) {
-          insertExercise.run(lessonId, ex.type, ex.question, ex.options, ex.answer, ex.explanation, exIdx + 1);
+          await runSql('INSERT INTO exercises (lesson_id, type, question, options, correct_answer, explanation, "order") VALUES (?, ?, ?, ?, ?, ?, ?)', [lessonId, ex.type, ex.question, ex.options, ex.answer, ex.explanation, exIdx + 1]);
         }
       }
     }
 
     for (const item of shopItems) {
-      insertShopItem.run(item.name, item.description, item.type, item.cost_gems, item.effect_data);
+      await runSql('INSERT INTO shop_items (name, description, type, cost_gems, effect_data) VALUES (?, ?, ?, ?, ?)', [item.name, item.description, item.type, item.cost_gems, item.effect_data]);
     }
 
     for (const ach of achievements) {
-      insertAchievement.run(ach.name, ach.description, ach.icon, ach.criteria_type, ach.criteria_value, ach.reward_xp, ach.reward_gems);
+      await runSql('INSERT INTO achievements (name, description, icon, criteria_type, criteria_value, reward_xp, reward_gems) VALUES (?, ?, ?, ?, ?, ?, ?)', [ach.name, ach.description, ach.icon, ach.criteria_type, ach.criteria_value, ach.reward_xp, ach.reward_gems]);
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -730,7 +721,7 @@ function seed() {
       [today, 'Perfect Shot', 'Get 100% on any lesson', 'perfect_lesson', 1, 75, 20],
     ];
     for (const c of challenges) {
-      insertChallenge.run(...c);
+      await runSql('INSERT INTO daily_challenges (challenge_date, title, description, target_type, target_value, reward_xp, reward_gems) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (challenge_date) DO NOTHING', c);
     }
 
     let totalEx = 0;
@@ -742,17 +733,16 @@ function seed() {
     console.log('Database already seeded. Skipping curriculum.');
   }
 
-  const existingVideos = queryOne('SELECT COUNT(*) as count FROM videos');
-  if (existingVideos.count === 0) {
+  const existingVideos = await queryOne('SELECT COUNT(*) as count FROM videos');
+  if (existingVideos.count === '0' || existingVideos.count === 0) {
     console.log('Seeding videos...');
-    const insertVideo = db.prepare('INSERT INTO videos (lesson_id, title, url, "order") VALUES (?, ?, ?, ?)');
     for (const video of videos) {
-      const lesson = queryOne(
+      const lesson = await queryOne(
         'SELECT l.id FROM lessons l JOIN units u ON l.unit_id = u.id WHERE u."order" = ? AND l."order" = ?',
         [video.unit, video.lesson]
       );
       if (lesson) {
-        insertVideo.run(lesson.id, video.title, video.url, video.order);
+        await runSql('INSERT INTO videos (lesson_id, title, url, "order") VALUES (?, ?, ?, ?)', [lesson.id, video.title, video.url, video.order]);
       }
     }
     console.log(`Seeded: ${videos.length} videos`);

@@ -4,12 +4,12 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
-    const lesson = queryOne('SELECT * FROM lessons WHERE id = ?', [id]);
+    const lesson = await queryOne('SELECT * FROM lessons WHERE id = ?', [id]);
     if (!lesson) {
       return Response.json({ error: 'Lesson not found' }, { status: 404 });
     }
 
-    const exercises = queryAll(
+    const exercises = await queryAll(
       'SELECT id, type, question, options, correct_answer, explanation, "order" FROM exercises WHERE lesson_id = ? ORDER BY "order"',
       [id]
     );
@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
       }
     });
 
-    const videos = queryAll(
+    const videos = await queryAll(
       'SELECT id, title, url, "order" FROM videos WHERE lesson_id = ? ORDER BY "order"',
       [id]
     );

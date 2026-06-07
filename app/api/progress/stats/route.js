@@ -8,9 +8,9 @@ export async function GET(request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    user = refillHearts(user);
+    user = await refillHearts(user);
 
-    const completedLessons = queryAll(
+    const completedLessons = await queryAll(
       `SELECT l.id, l.title, l.unit_id, u.title as unit_title, ulp.score, ulp.xp_earned, ulp.completed_at
        FROM user_lesson_progress ulp
        JOIN lessons l ON ulp.lesson_id = l.id
@@ -21,13 +21,13 @@ export async function GET(request) {
       [user.id]
     );
 
-    const totalLessons = queryOne('SELECT COUNT(*) as count FROM lessons');
-    const totalCompleted = queryOne(
+    const totalLessons = await queryOne('SELECT COUNT(*) as count FROM lessons');
+    const totalCompleted = await queryOne(
       'SELECT COUNT(*) as count FROM user_lesson_progress WHERE user_id = ? AND completed = 1',
       [user.id]
     );
 
-    const achievements = queryAll(
+    const achievements = await queryAll(
       `SELECT a.* FROM achievements a
        JOIN user_achievements ua ON a.id = ua.achievement_id
        WHERE ua.user_id = ?
@@ -35,7 +35,7 @@ export async function GET(request) {
       [user.id]
     );
 
-    const totalAchievements = queryOne('SELECT COUNT(*) as count FROM achievements');
+    const totalAchievements = await queryOne('SELECT COUNT(*) as count FROM achievements');
 
     const progressPct = totalLessons.count > 0
       ? Math.round((totalCompleted.count / totalLessons.count) * 100)

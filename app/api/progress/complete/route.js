@@ -1,20 +1,20 @@
 import { getUserFromRequest, updateStreak, refillHearts } from '@/lib/auth';
 import { queryOne, queryAll, runSql } from '@/lib/db';
 
-function checkAchievements(userId) {
-  const user = queryOne('SELECT * FROM users WHERE id = ?', [userId]);
-  const lessonsCompleted = queryOne(
+async function checkAchievements(userId) {
+  const user = await queryOne('SELECT * FROM users WHERE id = ?', [userId]);
+  const lessonsCompleted = await queryOne(
     'SELECT COUNT(*) as count FROM user_lesson_progress WHERE user_id = ? AND completed = 1',
     [userId]
   );
-  const perfectCount = queryOne(
+  const perfectCount = await queryOne(
     'SELECT COUNT(*) as count FROM user_lesson_progress WHERE user_id = ? AND completed = 1 AND score = 100',
     [userId]
   );
 
-  const achievements = queryAll('SELECT * FROM achievements');
+  const achievements = await queryAll('SELECT * FROM achievements');
   const unlocked = new Set(
-    queryAll('SELECT achievement_id FROM user_achievements WHERE user_id = ?', [userId]).map((r) => r.achievement_id)
+    (await queryAll('SELECT achievement_id FROM user_achievements WHERE user_id = ?', [userId])).map((r) => r.achievement_id)
   );
 
   const newlyUnlocked = [];
@@ -42,11 +42,11 @@ function checkAchievements(userId) {
     }
 
     if (meetsCriteria) {
-      runSql(
-        'INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)',
+      await runSql(
+        'INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?) ON CONFLICT (user_id, achievement_id) DO NOTHING',
         [userId, ach.id]
       );
-      runSql('UPDATE users SET xp = xp + ?, gems = gems + ? WHERE id = ?', [ach.reward_xp, ach.reward_gems, userId]);
+      await runSql('UPDATE users SET xp = xp + ?, gems = gems + ? WHERE id = ?', [ach.reward_xp, ach.reward_gems, userId]);
       newlyUnlocked.push(ach);
     }
   }
@@ -61,7 +61,7 @@ export async function POST(request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    user = refillHearts(user);
+    user = await refillHearts(user);
 
     const { lessonId, score, heartsLost } = await request.json();
 
@@ -69,12 +69,12 @@ export async function POST(request) {
       return Response.json({ error: 'lessonId and score are required' }, { status: 400 });
     }
 
-    const lesson = queryOne('SELECT * FROM lessons WHERE id = ?', [lessonId]);
+    const lesson = await queryOne('SELECT * FROM lessons WHERE id = ?', [lessonId]);
     if (!lesson) {
       return Response.json({ error: 'Lesson not found' }, { status: 404 });
     }
 
-    const existing = queryOne(
+    const existing = await queryOne(
       'SELECT * FROM user_lesson_progress WHERE user_id = ? AND lesson_id = ?',
       [user.id, lessonId]
     );
@@ -84,17 +84,17 @@ export async function POST(request) {
 
     if (existing) {
       if (!existing.completed) {
-        runSql(
+        await runSql(
           `UPDATE user_lesson_progress SET completed = 1, score = ?,
-           xp_earned = ?, gems_earned = ?, hearts_lost = ?, completed_at = datetime('now')
+           xp_earned = ?, gems_earned = ?, hearts_lost = ?, completed_at = NOW()
            WHERE id = ?`,
           [score, xpGain, gemsGain, heartsLost || 0, existing.id]
         );
       }
     } else {
-      runSql(
+      await runSql(
         `INSERT INTO user_lesson_progress (user_id, lesson_id, completed, score, xp_earned, gems_earned, hearts_lost, completed_at)
-         VALUES (?, ?, 1, ?, ?, ?, ?, datetime('now'))`,
+         VALUES (?, ?, 1, ?, ?, ?, ?, NOW())`,
         [user.id, lessonId, score, xpGain, gemsGain, heartsLost || 0]
       );
     }
@@ -106,12 +106,12 @@ export async function POST(request) {
       heartsRefillAt = new Date(Date.now() + 1 * 60 * 60 * 1000).toISOString();
     }
 
-    runSql(
+    await runSql(
       'UPDATE users SET xp = xp + ?, gems = gems + ?, hearts = ?, hearts_refill_at = ? WHERE id = ?',
       [xpGain, gemsGain, newHearts, heartsRefillAt, user.id]
     );
 
-    user = updateStreak({ ...user, xp: user.xp + xpGain, gems: user.gems + gemsGain, hearts: newHearts, hearts_refill_at: heartsRefillAt });
+    user = await updateStreak({ ...user, xp: user.xp + xpGain, gems: user.gems + gemsGain, hearts: newHearts, hearts_refill_at: heartsRefillAt });
 
     const weekStart = (() => {
       const now = new Date();
@@ -119,14 +119,14 @@ export async function POST(request) {
       const diff = now.getDate() - day + (day === 0 ? -6 : 1);
       return new Date(now.setDate(diff)).toISOString().split('T')[0];
     })();
-    runSql(
+    await runSql(
       'UPDATE leaderboard SET weekly_xp = weekly_xp + ? WHERE user_id = ? AND week_start = ?',
       [xpGain, user.id, weekStart]
     );
 
-    const newAchievements = checkAchievements(user.id);
+    const newAchievements = await checkAchievements(user.id);
 
-    const { password_hash, ...safeUser } = queryOne('SELECT * FROM users WHERE id = ?', [user.id]);
+    const { password_hash, ...safeUser } = await queryOne('SELECT * FROM users WHERE id = ?', [user.id]);
     return Response.json({
       user: safeUser,
       xpGain,

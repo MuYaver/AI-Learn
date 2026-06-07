@@ -3,13 +3,13 @@ import { getUserFromRequest, refillHearts } from '@/lib/auth';
 
 export async function GET(request) {
   try {
-    const units = queryAll('SELECT * FROM units ORDER BY "order"');
-    const lessons = queryAll('SELECT * FROM lessons ORDER BY unit_id, "order"');
+    const units = await queryAll('SELECT * FROM units ORDER BY "order"');
+    const lessons = await queryAll('SELECT * FROM lessons ORDER BY unit_id, "order"');
 
     let completedLessons = new Set();
     const user = await getUserFromRequest(request);
     if (user) {
-      const progress = queryAll(
+      const progress = await queryAll(
         'SELECT lesson_id FROM user_lesson_progress WHERE user_id = ? AND completed = 1',
         [user.id]
       );
