@@ -41,11 +41,6 @@ export default function AuthPage() {
     }
   };
 
-  const toggleMode = () => {
-    setIsRegister((prev) => !prev);
-    setError('');
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-duo-surface px-4">
       <div className="w-full max-w-md">
@@ -128,16 +123,6 @@ export default function AuthPage() {
                 : (isRegister ? 'Create account' : 'Log in')}
             </button>
           </form>
-
-          <p className="text-center text-sm text-duo-text-secondary mt-6">
-            {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              onClick={toggleMode}
-              className="text-duo-green font-semibold hover:underline"
-            >
-              {isRegister ? 'Log in' : 'Sign up'}
-            </button>
-          </p>
         </div>
       </div>
     </div>
