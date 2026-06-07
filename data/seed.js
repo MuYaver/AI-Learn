@@ -666,7 +666,7 @@ const shopItems = [
   { name: 'XP Boost', description: 'Double XP for the next 3 lessons (24 hour expiry)', type: 'xp_boost', cost_gems: 150, effect_data: '{"multiplier": 2, "lessons": 3, "hours": 24}' },
   { name: 'Mega XP Boost', description: 'Triple XP for the next 5 lessons (48 hour expiry)', type: 'xp_boost', cost_gems: 300, effect_data: '{"multiplier": 3, "lessons": 5, "hours": 48}' },
   { name: 'Timer Bonus', description: 'Gives extra time on timed challenges', type: 'cosmetic', cost_gems: 75, effect_data: '{"extra_seconds": 30}' },
-  { name: 'Golden Owl Avatar', description: 'Show off with an exclusive golden owl avatar', type: 'cosmetic', cost_gems: 500, effect_data: '{"avatar": "golden_owl"}' },
+  { name: 'Golden Caterpillar Avatar', description: 'Show off with an exclusive golden caterpillar avatar', type: 'cosmetic', cost_gems: 500, effect_data: '{"avatar": "golden_caterpillar"}' },
 ];
 
 const achievements = [
@@ -681,8 +681,8 @@ const achievements = [
   { name: 'Monthly Master', description: 'Maintain a 30-day streak', icon: '📅', criteria_type: 'streak', criteria_value: 30, reward_xp: 500, reward_gems: 50 },
   { name: 'Perfect Score', description: 'Score 100% on a lesson', icon: '💯', criteria_type: 'perfect_lesson', criteria_value: 1, reward_xp: 100, reward_gems: 20 },
   { name: 'Perfectionist', description: 'Score 100% on 5 lessons', icon: '🏆', criteria_type: 'perfect_lesson', criteria_value: 5, reward_xp: 300, reward_gems: 40 },
-  { name: 'Night Owl', description: 'Complete a lesson after 10 PM', icon: '🦉', criteria_type: 'night_owl', criteria_value: 1, reward_xp: 50, reward_gems: 10 },
-  { name: 'Early Bird', description: 'Complete a lesson before 8 AM', icon: '🌅', criteria_type: 'early_bird', criteria_value: 1, reward_xp: 50, reward_gems: 10 },
+  { name: 'Twilight Muncher', description: 'Complete a lesson after 10 PM', icon: '🐛', criteria_type: 'twilight_muncher', criteria_value: 1, reward_xp: 50, reward_gems: 10 },
+  { name: 'Morning Muncher', description: 'Complete a lesson before 8 AM', icon: '🐛', criteria_type: 'morning_muncher', criteria_value: 1, reward_xp: 50, reward_gems: 10 },
   { name: 'Speed Demon', description: 'Complete a lesson in under 2 minutes', icon: '⚡', criteria_type: 'speed_demon', criteria_value: 1, reward_xp: 100, reward_gems: 20 },
   { name: 'Gems Collector', description: 'Save up 500 gems', icon: '💎', criteria_type: 'gems_collected', criteria_value: 500, reward_xp: 200, reward_gems: 25 },
 ];

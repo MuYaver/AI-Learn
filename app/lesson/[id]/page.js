@@ -421,7 +421,7 @@ export default function LessonPage() {
   if (loading || fetching) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-duo-surface">
-        <div className="text-5xl animate-bounce">🦉</div>
+        <div className="text-5xl animate-bounce">🐛</div>
       </div>
     );
   }

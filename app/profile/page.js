@@ -51,7 +51,7 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-duo-green/10 rounded-full flex items-center justify-center text-4xl mx-auto mb-3">
-            🦉
+            🐛
           </div>
           <h1 className="text-2xl font-bold text-duo-text">{user.username}</h1>
           <p className="text-duo-text-secondary capitalize">{user.league || 'bronze'} League {leagueEmoji[user.league] || ''}</p>

@@ -39,7 +39,7 @@ export default function TopBar() {
     <header className="bg-white border-b border-duo-border sticky top-0 z-50">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl">🦉</span>
+          <span className="text-2xl">🐛</span>
           <span className="text-xl font-bold text-duo-green hidden sm:inline">AI Learn</span>
         </Link>
 

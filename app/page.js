@@ -31,7 +31,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-duo-surface">
         <div className="flex flex-col items-center gap-4">
-          <div className="text-5xl animate-bounce">🦉</div>
+          <div className="text-5xl animate-bounce">🐛</div>
           <p className="text-duo-text-secondary">Loading your path...</p>
         </div>
       </div>

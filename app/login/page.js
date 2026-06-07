@@ -45,7 +45,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-duo-surface px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🦉</div>
+          <div className="text-6xl mb-4">🐛</div>
           <h1 className="text-3xl font-bold text-duo-green">AI Learn</h1>
           <p className="text-duo-text-secondary mt-2">
             {isRegister ? 'Start your AI learning journey!' : 'Learn AI. Have fun. Level up.'}
