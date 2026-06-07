@@ -35,6 +35,8 @@ export async function GET(request) {
       [user.id]
     );
 
+    const totalAchievements = queryOne('SELECT COUNT(*) as count FROM achievements');
+
     const progressPct = totalLessons.count > 0
       ? Math.round((totalCompleted.count / totalLessons.count) * 100)
       : 0;
@@ -45,6 +47,7 @@ export async function GET(request) {
       completedLessons,
       totalLessons: totalLessons.count,
       totalCompleted: totalCompleted.count,
+      totalAchievements: totalAchievements.count,
       progressPct,
       achievements,
     });

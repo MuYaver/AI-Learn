@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { playCorrect, playWrong, playComplete } from '@/lib/sounds';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
@@ -118,31 +119,97 @@ function FillBlank({ exercise, selectedAnswer, onSelect, showResult }) {
 
 function Match({ exercise, selectedAnswer, onSelect, showResult }) {
   const options = exercise.options || [];
-  const matched = selectedAnswer || '';
+  const pairs = options.map((o) => {
+    const idx = o.indexOf(':');
+    if (idx === -1) return { term: o, def: o };
+    return { term: o.slice(0, idx).trim(), def: o.slice(idx + 1).trim() };
+  });
+
+  const [currentTerm, setCurrentTerm] = useState(0);
+  const [shuffledDefs] = useState(() =>
+    pairs.map((p) => p.def).sort(() => Math.random() - 0.5)
+  );
+  const [attempts, setAttempts] = useState({});
+
+  const correctPairStr = pairs.map((p) => `${p.term}:${p.def}`).join('|');
+
+  const handlePick = (def) => {
+    const pair = `${pairs[currentTerm].term}:${def}`;
+    const isCorrect = pairs[currentTerm].def === def;
+    setAttempts((prev) => ({ ...prev, [currentTerm]: pair }));
+
+    if (isCorrect) {
+      playCorrect();
+    } else {
+      playWrong();
+    }
+
+    if (currentTerm < pairs.length - 1) {
+      setTimeout(() => setCurrentTerm((prev) => prev + 1), 600);
+    } else {
+      const allPairs = Object.values({ ...attempts, [currentTerm]: pair }).join('|');
+      onSelect(allPairs);
+    }
+  };
+
+  const userPairs = selectedAnswer ? selectedAnswer.split('|') : [];
+  const allSubmitted = showResult;
 
   return (
-    <div className="space-y-2">
-      {options.map((option, i) => {
-        const isSelected = matched === option;
-        const isCorrect = showResult && option === exercise.correct_answer;
-        const isWrong = showResult && isSelected && option !== exercise.correct_answer;
+    <div className="space-y-4">
+      <div className="bg-duo-surface rounded-xl p-4 text-center">
+        <p className="text-xs text-duo-text-secondary mb-1">Match the term:</p>
+        <p className="text-xl font-bold text-duo-text">{pairs[currentTerm].term}</p>
+        {pairs.length > 1 && (
+          <p className="text-xs text-duo-text-secondary mt-1">
+            {currentTerm + 1} of {pairs.length}
+          </p>
+        )}
+      </div>
 
-        let bgClass = 'bg-white border-duo-border hover:border-duo-green/50';
-        if (isSelected) bgClass = 'bg-duo-blue/10 border-duo-blue';
-        if (isCorrect) bgClass = 'bg-duo-green/10 border-duo-green';
-        if (isWrong) bgClass = 'bg-duo-red/10 border-duo-red';
+      <div className="space-y-2">
+        {shuffledDefs.map((def, i) => {
+          const isUsed = attempts[currentTerm - 1] && userPairs.slice(0, currentTerm).some((p) => p.endsWith(`:${def}`));
+          if (isUsed) return null;
 
-        return (
-          <button
-            key={i}
-            onClick={() => !showResult && onSelect(option)}
-            disabled={showResult}
-            className={`w-full text-left p-4 rounded-xl border-2 transition-all ${bgClass}`}
-          >
-            <span className="text-duo-text">{option}</span>
-          </button>
-        );
-      })}
+          const selectedNow = allSubmitted && userPairs[currentTerm] === `${pairs[currentTerm].term}:${def}`;
+          const isCorrect = allSubmitted && pairs.some((p) => p.term === pairs[currentTerm].term && p.def === def);
+          const isWrong = selectedNow && !isCorrect;
+
+          let bgClass = 'bg-white border-duo-border hover:border-duo-green/50';
+          if (allSubmitted && isCorrect) bgClass = 'bg-duo-green/10 border-duo-green';
+          if (isWrong) bgClass = 'bg-duo-red/10 border-duo-red';
+
+          return (
+            <button
+              key={i}
+              onClick={() => !allSubmitted && handlePick(def)}
+              disabled={allSubmitted}
+              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${bgClass}`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-duo-surface flex items-center justify-center text-sm font-bold text-duo-text flex-shrink-0">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="text-duo-text">{def}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {allSubmitted && (
+        <div className="bg-duo-surface rounded-xl p-4">
+          <p className="text-xs text-duo-text-secondary mb-2 font-bold">Correct matches:</p>
+          {pairs.map((p, i) => (
+            <div key={i} className="text-sm flex gap-2 py-0.5">
+              <span className="font-bold text-duo-text">{p.term}</span>
+              <span className="text-duo-text-secondary">→</span>
+              <span className="text-duo-green font-medium">{p.def}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -176,22 +243,28 @@ function XPAnimation({ xp, onComplete }) {
   );
 }
 
-function HeartsDisplay({ hearts, maxHearts }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {[...Array(maxHearts)].map((_, i) => (
-        <motion.span
-          key={i}
-          initial={false}
-          animate={i < hearts ? { scale: 1, opacity: 1 } : { scale: 0.5, opacity: 0.2 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-          className={`text-xl ${i < hearts ? 'animate-bounce-in' : ''}`}
-        >
-          {i < hearts ? '❤️' : '🖤'}
-        </motion.span>
-      ))}
-    </div>
-  );
+function fuzzyMatch(userAnswer, correctAnswer) {
+  const a = userAnswer.toLowerCase().trim();
+  const b = correctAnswer.toLowerCase().trim();
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let d = 0;
+  const minLen = Math.min(a.length, b.length);
+  for (let i = 0; i < minLen; i++) if (a[i] !== b[i]) d++;
+  d += Math.abs(a.length - b.length);
+  return d <= 1;
+}
+
+function checkCorrect(exercise, answer) {
+  if (exercise.type === 'fill_blank') return fuzzyMatch(answer, exercise.correct_answer);
+  if (exercise.type === 'match') {
+    if (!answer || !exercise.correct_answer) return false;
+    const userPairs = answer.split('|').map((s) => s.trim()).sort();
+    const options = exercise.options || [];
+    const correctPairs = options.slice().sort();
+    return userPairs.join('|') === correctPairs.join('|');
+  }
+  return answer.toLowerCase().trim() === exercise.correct_answer.toLowerCase().trim();
 }
 
 function ConfettiEffect() {
@@ -238,7 +311,7 @@ export default function LessonPage() {
   const [showXPAnim, setShowXPAnim] = useState(false);
   const [xpGained, setXpGained] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [hearts, setHearts] = useState(5);
+  const [wrongCount, setWrongCount] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -266,18 +339,21 @@ export default function LessonPage() {
   }, [params?.id, user]);
 
   const handleAnswer = useCallback((answer) => {
-    if (submitted[currentIdx] || hearts <= 0) return;
+    if (submitted[currentIdx]) return;
 
     const exercise = exercises[currentIdx];
-    const isCorrect = answer.toLowerCase().trim() === exercise.correct_answer.toLowerCase().trim();
+    const isCorrect = checkCorrect(exercise, answer);
 
     setAnswers((prev) => ({ ...prev, [currentIdx]: answer }));
     setSubmitted((prev) => ({ ...prev, [currentIdx]: true }));
 
     if (!isCorrect) {
-      setHearts((prev) => Math.max(0, prev - 1));
+      setWrongCount((prev) => prev + 1);
+      playWrong();
+    } else {
+      playCorrect();
     }
-  }, [currentIdx, exercises, submitted, hearts]);
+  }, [currentIdx, exercises, submitted]);
 
   const handleNext = () => {
     if (currentIdx < exercises.length - 1) {
@@ -291,16 +367,27 @@ export default function LessonPage() {
     }
   };
 
+  const handleReview = () => {
+    setShowCompletion(false);
+    setCurrentIdx(0);
+    setAnswers({});
+    setSubmitted({});
+    setShowConfetti(false);
+    setWrongCount(0);
+  };
+
   const handleFinish = async () => {
     setCompleting(true);
     try {
       const total = exercises.length;
       const correct = Object.entries(answers).filter(([idx, answer]) => {
         const ex = exercises[parseInt(idx)];
-        return answer.toLowerCase().trim() === ex.correct_answer.toLowerCase().trim();
+        return checkCorrect(ex, answer);
       }).length;
       const score = Math.round((correct / total) * 100);
-      const heartsLost = 5 - (user?.hearts ?? 5);
+      const heartsLost = Math.floor(wrongCount / 2);
+
+      playComplete();
 
       const res = await fetch('/api/progress/complete', {
         method: 'POST',
@@ -357,9 +444,10 @@ export default function LessonPage() {
     const total = exercises.length;
     const correct = Object.entries(answers).filter(([idx, answer]) => {
       const ex = exercises[parseInt(idx)];
-      return answer.toLowerCase().trim() === ex.correct_answer.toLowerCase().trim();
+      return checkCorrect(ex, answer);
     }).length;
     const score = Math.round((correct / total) * 100);
+    const passed = score >= 70;
 
     return (
       <div className="min-h-screen bg-duo-surface flex items-center justify-center px-4">
@@ -370,7 +458,7 @@ export default function LessonPage() {
           className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center"
         >
           <div className="text-6xl mb-4">{score >= 80 ? '🏆' : score >= 50 ? '👍' : '💪'}</div>
-          <h2 className="text-3xl font-bold text-duo-text mb-2">Lesson Complete!</h2>
+          <h2 className="text-3xl font-bold text-duo-text mb-2">{passed ? 'Lesson Complete!' : 'Almost there!'}</h2>
           <p className="text-duo-text-secondary mb-6">
             {score >= 80 ? 'Amazing job!' : score >= 50 ? 'Good effort!' : 'Keep practicing!'}
           </p>
@@ -378,7 +466,7 @@ export default function LessonPage() {
           <div className="bg-duo-surface rounded-2xl p-6 mb-6 space-y-3">
             <div className="flex justify-between">
               <span className="text-duo-text-secondary">Score</span>
-              <span className="font-bold text-duo-text">{score}%</span>
+              <span className={`font-bold ${passed ? 'text-duo-text' : 'text-duo-red'}`}>{score}%</span>
             </div>
             <div className="flex justify-between">
               <span className="text-duo-text-secondary">Correct</span>
@@ -388,15 +476,41 @@ export default function LessonPage() {
               <span className="text-duo-text-secondary">XP Earned</span>
               <span className="font-bold text-duo-blue">+{xpGained} XP</span>
             </div>
+            {!passed && (
+              <div className="text-center pt-2 border-t border-duo-border">
+                <span className="text-xs text-duo-red font-medium">Need 70% to pass — keep trying!</span>
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={() => router.push('/')}
-            className="w-full py-3.5 rounded-xl bg-duo-green text-white font-bold text-lg
-                       hover:bg-duo-green-dark transition-all shadow-lg shadow-duo-green/30"
-          >
-            Continue Learning
-          </button>
+          <div className="flex gap-3">
+            {passed ? (
+              <>
+                <button
+                  onClick={() => router.push('/')}
+                  className="flex-1 py-3.5 rounded-xl bg-duo-green text-white font-bold text-lg
+                             hover:bg-duo-green-dark transition-all shadow-lg shadow-duo-green/30"
+                >
+                  Continue Learning
+                </button>
+                <button
+                  onClick={handleReview}
+                  className="flex-1 py-3.5 rounded-xl bg-duo-border text-duo-text font-bold text-lg
+                             hover:bg-duo-surface transition-all"
+                >
+                  Review
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleReview}
+                className="flex-1 py-3.5 rounded-xl bg-duo-orange text-white font-bold text-lg
+                           hover:bg-duo-orange/90 transition-all shadow-lg shadow-duo-orange/30"
+              >
+                🔁 Try Again
+              </button>
+            )}
+          </div>
         </motion.div>
       </div>
     );
@@ -404,7 +518,7 @@ export default function LessonPage() {
 
   const exercise = exercises[currentIdx];
   const hasAnswer = submitted[currentIdx];
-  const isCorrect = hasAnswer && answers[currentIdx]?.toLowerCase().trim() === exercise.correct_answer.toLowerCase().trim();
+  const isCorrect = hasAnswer && checkCorrect(exercise, answers[currentIdx]);
 
   return (
     <div className="min-h-screen bg-duo-surface">
@@ -421,7 +535,6 @@ export default function LessonPage() {
           >
             ← Exit
           </button>
-          <HeartsDisplay hearts={hearts} maxHearts={5} />
         </div>
 
         <div className="mb-6">
@@ -538,7 +651,7 @@ export default function LessonPage() {
               )}
             </div>
 
-            {hearts <= 0 && !hasAnswer && (
+            {(user?.hearts ?? 5) <= 0 && !hasAnswer && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -36,57 +36,56 @@ export default function AchievementsPage() {
 
   if (!user) return null;
 
-  const unlocked = achievements.filter((a) => a.unlocked);
-  const locked = achievements.filter((a) => !a.unlocked);
+  const unlocked = achievements.filter((a) => a.unlocked).length;
 
   return (
     <div className="min-h-screen bg-duo-surface pb-20">
       <TopBar />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-duo-text mb-2">Achievements</h1>
-        <p className="text-duo-text-secondary text-sm mb-6">
-          {unlocked.length}/{achievements.length} unlocked
-        </p>
-
-        {unlocked.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-sm font-bold text-duo-text-secondary uppercase tracking-wide mb-3">Unlocked</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {unlocked.map((ach, idx) => (
-                <motion.div
-                  key={ach.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="bg-white rounded-2xl p-4 text-center border border-duo-green/30 shadow-sm"
-                >
-                  <div className="text-4xl mb-2">{ach.icon}</div>
-                  <h3 className="font-bold text-duo-text text-sm">{ach.name}</h3>
-                  <p className="text-xs text-duo-text-secondary mt-1">{ach.description}</p>
-                </motion.div>
-              ))}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-duo-text">Achievements</h1>
+            <p className="text-duo-text-secondary text-sm">{unlocked}/{achievements.length} unlocked</p>
+          </div>
+          <div className="relative w-16 h-16">
+            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="#E5E5E5" strokeWidth="6" />
+              <circle
+                cx="32" cy="32" r="28" fill="none" stroke="#CE82FF" strokeWidth="6"
+                strokeDasharray={`${achievements.length > 0 ? (unlocked / achievements.length) * 176 : 0} 176`}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-bold text-duo-purple">{achievements.length > 0 ? Math.round((unlocked / achievements.length) * 100) : 0}%</span>
             </div>
           </div>
-        )}
+        </div>
 
-        <div>
-          <h2 className="text-sm font-bold text-duo-text-secondary uppercase tracking-wide mb-3">Locked</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {locked.map((ach, idx) => (
-              <motion.div
-                key={ach.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: idx * 0.05 }}
-                className="bg-white rounded-2xl p-4 text-center border border-duo-border opacity-50"
-              >
-                <div className="text-4xl mb-2 grayscale">{ach.icon}</div>
-                <h3 className="font-bold text-duo-text text-sm">{ach.name}</h3>
-                <p className="text-xs text-duo-text-secondary mt-1">{ach.description}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {achievements.map((ach, idx) => (
+            <motion.div
+              key={ach.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className={`bg-white rounded-2xl p-4 text-center border-2 transition-all ${
+                ach.unlocked
+                  ? 'border-duo-green/40 shadow-sm'
+                  : 'border-duo-border opacity-60'
+              }`}
+            >
+              <div className={`text-4xl mb-2 ${ach.unlocked ? '' : 'grayscale'}`}>{ach.icon}</div>
+              <h3 className="font-bold text-duo-text text-sm">{ach.name}</h3>
+              <p className="text-xs text-duo-text-secondary mt-1">{ach.description}</p>
+              {ach.unlocked && (
+                <div className="mt-2 inline-block bg-duo-green/10 text-duo-green px-2 py-0.5 rounded-full text-xs font-bold">
+                  Earned
+                </div>
+              )}
+            </motion.div>
+          ))}
         </div>
       </div>
 

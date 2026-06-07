@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
 import TopBar, { BottomNav } from '@/components/layout/Navbar';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, loading, logoutUser } = useUser();
@@ -154,17 +155,31 @@ export default function ProfilePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="mt-4 bg-white rounded-2xl shadow-sm border border-duo-border p-5"
+                className="mt-4"
               >
-                <h3 className="font-bold text-duo-text mb-3">Recent Achievements</h3>
-                <div className="flex flex-wrap gap-2">
-                  {stats.achievements.slice(0, 6).map((ach) => (
-                    <div key={ach.id} className="flex items-center gap-1.5 bg-duo-surface px-3 py-1.5 rounded-full">
-                      <span>{ach.icon}</span>
-                      <span className="text-xs font-medium text-duo-text">{ach.name}</span>
-                    </div>
-                  ))}
-                </div>
+                <Link href="/achievements" className="block bg-white rounded-2xl shadow-sm border border-duo-border p-5 hover:border-duo-purple/40 transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-duo-text">Achievements</h3>
+                    <span className="text-sm font-bold text-duo-purple">
+                      {stats.achievements.length}/{stats.totalAchievements}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {stats.achievements.slice(0, 3).map((ach) => (
+                      <div key={ach.id} className="flex items-center gap-1.5 bg-duo-surface px-3 py-1.5 rounded-full">
+                        <span>{ach.icon}</span>
+                        <span className="text-xs font-medium text-duo-text">{ach.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-1.5 bg-duo-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-duo-purple rounded-full"
+                      style={{ width: `${stats.totalAchievements > 0 ? Math.round((stats.achievements.length / stats.totalAchievements) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-duo-text-secondary mt-2">Tap to view all achievements →</p>
+                </Link>
               </motion.div>
             )}
           </>
